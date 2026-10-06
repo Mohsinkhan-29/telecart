@@ -145,7 +145,7 @@ function Hero() {
     if (paused || reduce) return;
     const id = setInterval(() => {
       if (!document.hidden) setStep((s) => s + 1);
-    }, 1500);
+    }, 2500);
     return () => clearInterval(id);
   }, [paused]);
 

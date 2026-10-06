@@ -4,7 +4,7 @@ import { SHOP } from "../lib/format";
 
 const LINKS = [
   ["/admin/dashboard", "Dashboard"], ["/admin/orders", "Orders"], ["/admin/ledger", "Ledger"],
-  ["/admin/catalog", "Catalog"], ["/admin/categories", "Categories"], ["/admin/content", "Site content"],
+  ["/admin/catalog", "Catalog"], ["/admin/categories", "Categories"], 
   ["/admin/subscribers", "Newsletter"], ["/admin/knowledge", "Chatbot"],
 ];
 
