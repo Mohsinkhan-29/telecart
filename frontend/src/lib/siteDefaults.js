@@ -24,7 +24,7 @@ export const SITE_DEFAULTS = {
   header: {
     links: [
       { label: "Home", to: "/" },
-      { label: "Mobiles", to: "/products?category=mobile-phones" },
+      { label: "Mobiles", to: "/products?category=smartphones" },
       { label: "Accessories", to: "/products" },
       { label: "About", to: "/about" },
       { label: "Contact", to: "/contact" },
