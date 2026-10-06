@@ -19,6 +19,41 @@ const isActive = (to, loc) => {
   return loc.pathname === path && !loc.search.includes("category=");
 };
 
+
+/* Logo + store name, reused by Navbar, Footer and InfoPages */
+export function BrandMark({ className = "", size = "md", showName = true, dark = false }) {
+  const s = useSettings();
+
+  const img = {
+    sm: "h-[32px] w-[32px]",
+    md: "h-[38px] w-[38px] sm:h-[42px] sm:w-[42px]",
+    lg: "h-[44px] w-[44px] sm:h-[48px] sm:w-[48px]",
+  };
+  const text = {
+    sm: "text-[15px]",
+    md: "text-[17px] sm:text-[19px]",
+    lg: "text-[19px] sm:text-[21px]",
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+      <img
+        src="/navlogo.png"
+        alt=""
+        aria-hidden="true"
+        className={`block shrink-0 object-contain ${img[size] ?? img.md}`}
+      />
+      {showName && (
+        <span
+          className={`whitespace-nowrap font-extrabold tracking-[-0.02em] ${text[size] ?? text.md}`}
+        >
+          <span className="text-white">TELE</span>
+          <span className="text-[#9ec72a]">CART</span>
+        </span>
+      )}
+    </span>
+  );
+}
 export default function Navbar() {
   const { count } = useCart();
   const s = useSettings();
@@ -64,25 +99,8 @@ export default function Navbar() {
         <div className="tc-wrap">
 
           {/* Logo */}
-          <Link
-            to="/"
-            className="tc-brand flex items-center shrink-0"
-            aria-label={s.store.name}
-          >
-            <img
-              src="/navlogo.png"
-              alt={s.store.name}
-              className="
-                block
-                w-[100px]
-                h-[42px]
-                sm:w-[115px]
-                sm:h-[46px]
-                lg:w-[125px]
-                lg:h-[48px]
-                object-contain
-              "
-            />
+          <Link to="/" className="tc-brand flex items-center shrink-0" aria-label={s.store.name}>
+            <BrandMark />
           </Link>
 
           {/* Desktop navigation */}
