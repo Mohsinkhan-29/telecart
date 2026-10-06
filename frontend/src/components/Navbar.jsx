@@ -119,14 +119,6 @@ export default function Navbar() {
           {/* Right side */}
           <div className="tc-nav-r">
 
-            {/* Search */}
-            <Link
-              className="tc-ibtn"
-              to="/products"
-              aria-label="Search products"
-            >
-              <Icon name="search" />
-            </Link>
 
             {/* Cart */}
             <Link
