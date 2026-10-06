@@ -5,8 +5,8 @@
 export const SITE_DEFAULTS = {
   store: {
     name: "Tele Cart",
-    whatsapp: "",
-    phone: "",
+    whatsapp: "03342844244",
+    phone: "03342844244",
     email: "",
     address: "",
     hours: "",

@@ -13,20 +13,38 @@ import Icon from "../components/Icon";
 import { ErrorBox } from "../components/Status";
 
 /* ================================================================== */
-/* HERO: unchanged from your version. Its text now comes from          */
-/* Admin → Site content → Hero (defaults are the original wording).    */
+/* HERO: text comes from Admin → Site content → Hero.                  */
+/* Phones loop through left / center / right slots.                    */
 /* ================================================================== */
 
-const PALETTES = [
-  ["#e9e2d8", "#3a3a3a"],
-  ["#dfe6ea", "#1e2a30"],
-  ["#ecdccb", "#4a3324"],
+const HERO_PHONES = ["/iphone1.png", "/iphone2.png", "/iphone3.png"];
+
+/* slot 0 = left, 1 = center, 2 = right
+   (right sits lowest so the phone wrapping from left → right passes behind) */
+const SLOTS = [
+  { x: "-30%", y: "6%", r: -9, s: 0.84, z: 2, b: 0.78 },
+  { x: "0%", y: "-3%", r: 0, s: 1, z: 3, b: 1 },
+  { x: "30%", y: "9%", r: 9, s: 0.84, z: 1, b: 0.78 },
 ];
 
-/* Glow border, keyframes and reduced-motion rule (pseudo-elements can't be Tailwind classes) */
+/* Keyframes, phone animations and reduced-motion rule */
 const CSS = `
 @keyframes tcpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-@media (prefers-reduced-motion:reduce){.tc-anim{animation:none!important;transition:none!important}}
+@keyframes tcpop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes tcrise{from{opacity:0;transform:translateY(60px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes tcfloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(1.5deg)}}
+@keyframes tcglow{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.12)}}
+
+.tc-phone-slot{transition:transform .95s cubic-bezier(.65,0,.35,1),filter .95s ease;will-change:transform}
+.tc-phone-rise{opacity:0;animation:tcrise .9s cubic-bezier(.22,1,.36,1) forwards}
+.tc-phone-float{animation:tcfloat 4.2s ease-in-out infinite}
+.tc-phone-glow{transform:translate(-50%,-50%);animation:tcglow 3.2s ease-in-out infinite}
+.tc-badge-pop{animation:tcpop .6s cubic-bezier(.34,1.56,.64,1),tcpulse 2.4s ease-in-out .6s infinite}
+
+@media (prefers-reduced-motion:reduce){
+  .tc-anim,.tc-phone-slot,.tc-phone-rise,.tc-phone-float,.tc-phone-glow,.tc-badge-pop{animation:none!important;transition:none!important}
+  .tc-phone-rise{opacity:1}
+}
 `;
 
 /* Hyperspeed canvas background (lime / charcoal) */
@@ -118,24 +136,18 @@ const SmartLink = ({ to, className, children }) =>
 function Hero() {
   const h = useSettings().hero;
 
-  /* hero phone colour cycle */
-  const [pi, setPi] = useState(0);
-  const [fade, setFade] = useState(false);
+  /* phone carousel loop */
+  const [step, setStep] = useState(0);
+  const [paused, setPaused] = useState(false);
+
   useEffect(() => {
-    let t2;
-    const t1 = setInterval(() => {
-      setFade(true);
-      t2 = setTimeout(() => {
-        setPi((n) => (n + 1) % PALETTES.length);
-        setFade(false);
-      }, 420);
-    }, 3600);
-    return () => {
-      clearInterval(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-  const [a, b] = PALETTES[pi];
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (paused || reduce) return;
+    const id = setInterval(() => {
+      if (!document.hidden) setStep((s) => s + 1);
+    }, 1500);
+    return () => clearInterval(id);
+  }, [paused]);
 
   return (
     <section className="tc-hero-keep relative z-[1] bg-transparent pb-[60px] pt-[76px]">
@@ -165,20 +177,49 @@ function Hero() {
         </div>
 
         {/* phone stage */}
-        <div className="tc-phone-stage relative flex h-[300px] items-center justify-center sm:h-[360px] lg:h-[420px]" aria-hidden="true">
-          <Phone className="left-[2%] top-[8%] z-[1] rotate-[-9deg]" bg={`linear-gradient(160deg,${b},${a})`} />
-          <Phone
-            className="left-[32%] top-[-2%] z-[3]"
-            bg={`linear-gradient(160deg,${a},${b})`}
-            style={{
-              opacity: fade ? 0 : 1,
-              transform: fade ? "translateY(24px) scale(.94)" : "translateY(0) scale(1)",
-            }}
-          />
-          <Phone className="left-[60%] top-[12%] z-[2] rotate-[9deg]" bg={`linear-gradient(160deg,${a},${b})`} />
+        <div
+          className="tc-phone-stage relative h-[300px] sm:h-[360px] lg:h-[420px]"
+          aria-hidden="true"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          {/* soft lime glow behind the center phone */}
+          <div className="tc-phone-glow pointer-events-none absolute left-1/2 top-1/2 h-[60%] w-[45%] rounded-full bg-[#c6e619]/20 blur-[70px]" />
+
+          {HERO_PHONES.map((src, i) => {
+            const slot = SLOTS[(((i - step) % 3) + 3) % 3];
+            return (
+              <div
+                key={src}
+                className="tc-phone-slot absolute inset-0 flex items-center justify-center"
+                style={{
+                  zIndex: slot.z,
+                  transform: `translate(${slot.x}, ${slot.y}) rotate(${slot.r}deg) scale(${slot.s})`,
+                  filter: `brightness(${slot.b})`,
+                }}
+              >
+                <div className="tc-phone-rise w-[38%] max-w-[230px]" style={{ animationDelay: `${i * 140}ms` }}>
+                  <img
+                    src={src}
+                    alt=""
+                    draggable="false"
+                    className="tc-phone-float w-full select-none drop-shadow-[0_30px_40px_rgba(0,0,0,.55)]"
+                    style={{ animationDelay: `${i * -1.4}s` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Badge: pops in again each time the phones rotate */}
           {h.showBadge && (
-            <div className="tc-anim absolute right-[2%] top-[3%] z-[4] flex h-[70px] w-[70px] animate-[tcpulse_2.4s_ease-in-out_infinite] flex-col items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#6c6d72] shadow-[0_14px_30px_-8px_rgba(0,0,0,.3)] sm:h-[82px] sm:w-[82px] sm:text-[11px]">
-              {h.badgeTop}<b className="text-[20px] text-[#7ba01e]">{h.badgeValue}</b>{h.badgeBottom}
+            <div
+              key={step}
+              className="tc-badge-pop absolute right-[2%] top-[3%] z-[4] flex h-[70px] w-[70px] flex-col items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#6c6d72] shadow-[0_14px_30px_-8px_rgba(0,0,0,.3)] sm:h-[82px] sm:w-[82px] sm:text-[11px]"
+            >
+              {h.badgeTop}
+              <b className="text-[20px] text-[#7ba01e]">{h.badgeValue}</b>
+              {h.badgeBottom}
             </div>
           )}
         </div>
