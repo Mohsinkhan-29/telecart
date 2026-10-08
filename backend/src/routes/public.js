@@ -24,6 +24,16 @@ r.get("/categories", ah(async (_req, res) => {
   res.json(rows);
 }));
 
+
+// Product photos uploaded from the admin.
+r.get("/images/:id", ah(async (req, res) => {
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) throw new HttpError(404, "Image not found");
+  const { rows } = await query("SELECT mime, data FROM images WHERE id = $1", [req.params.id]);
+  if (!rows[0]) throw new HttpError(404, "Image not found");
+  res.set({ "Content-Type": rows[0].mime, "Cache-Control": "public, max-age=31536000, immutable" });
+  res.send(rows[0].data);
+}));
+
 // Footer newsletter.
 r.post("/subscribe", ah(async (req, res) => {
   const email = String(req.body?.email ?? "").trim().toLowerCase();

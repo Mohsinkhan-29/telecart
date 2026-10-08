@@ -136,7 +136,17 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS show_on_home BOOLEAN NOT NULL DE
 -- Per-product search snippet (falls back to the template in Site content → SEO).
 ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_title       TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_description TEXT;
+
+-- Uploaded product photos, stored in the database and served from /api/images/:id
+CREATE TABLE IF NOT EXISTS images (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mime       TEXT NOT NULL,
+  data       BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
+
+
 
 try {
   await pool.query(SQL);
