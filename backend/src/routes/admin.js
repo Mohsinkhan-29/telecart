@@ -66,7 +66,7 @@ r.post("/upload", express.raw({ type: IMAGE_TYPES, limit: "5mb" }), ah(async (re
   const mime = req.headers["content-type"];
   if (!IMAGE_TYPES.includes(mime) || !req.body?.length) throw new HttpError(400, "Upload a JPG, PNG, WEBP or GIF image.");
   const { rows } = await query("INSERT INTO images (mime, data) VALUES ($1, $2) RETURNING id", [mime, req.body]);
-  res.status(201).json({ url: `${req.protocol}://${req.get("host")}/api/images/${rows[0].id}` });
+  res.status(201).json({ url: `/api/images/${rows[0].id}` });
 }));
 
 // ───────── Dashboard ─────────
