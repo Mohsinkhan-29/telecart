@@ -2,7 +2,7 @@ const BASE = import.meta.env.VITE_API_URL || "";
 const TOKEN_KEY = "telecart-admin-token";
 
 // Uploaded images are saved as "/api/images/<id>"; this puts the API address in front.
-export const imgUrl = (src) => (src?.startsWith("/api/") ? BASE + src : src);
+export const imgUrl = (src) => (src?.startsWith("https://telecart-rx0e.onrender.com/api/") ? BASE + src : src);
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
