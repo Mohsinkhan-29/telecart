@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { adminApi } from "../lib/api";
 import { useFetch } from "../lib/useFetch";
 import { specsToText } from "../lib/format";
 import { ErrorBox, Loading } from "../components/Status";
+import { adminApi, imgUrl } from "../lib/api";
 
 const blankVariant = () => ({ label: "", sku: "", price: "", compareAtPrice: "", stock: "0" });
 const EMPTY = {
@@ -98,7 +98,7 @@ export default function ProductForm() {
             <div className="mt-3 flex flex-wrap gap-3">
               {images.map((src, i) => (
                 <div key={src} className="text-center">
-                  <img src={src} alt={`${f.name || "Product"} photo ${i + 1}`}
+                  <img src={imgUrl(src)} alt={`${f.name || "Product"} photo ${i + 1}`}
                     className="w-28 h-28 object-contain rounded border border-steel-line bg-white p-2" />
                   <button type="button" className="text-xs text-chrome hover:text-danger mt-1"
                     onClick={() => set("images", images.filter((_, j) => j !== i).join("\n"))}>
