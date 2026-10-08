@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, imgUrl } from "../lib/api";
 import { useFetch } from "../lib/useFetch";
 import { useCart } from "../context/CartContext";
 import { useSettings } from "../context/SettingsContext";
@@ -20,11 +20,11 @@ function Gallery({ p, label }) {
   if (p.images.length) {
     return (
       <div>
-        <div className="tc-gal"><img src={p.images[i]} alt={p.name} /></div>
+        <div className="tc-gal"><img src={imgUrl(p.images[i])} alt={p.name} /></div>
         {p.images.length > 1 && (
           <div className="tc-thumbs">
             {p.images.map((src, k) => (
-              <button key={src} className={k === i ? "on" : ""} onClick={() => setI(k)} aria-label={`Photo ${k + 1}`}><img src={src} alt="" /></button>
+              <button key={src} className={k === i ? "on" : ""} onClick={() => setI(k)} aria-label={`Photo ${k + 1}`}><img src={imgUrl(src)} alt="" /></button>
             ))}
           </div>
         )}
@@ -62,7 +62,7 @@ function Detail({ p }) {
     title: p.seoTitle || s.seo.productTitle, description: p.seoDescription || s.seo.productDescription, vars,
     jsonLd: {
       "@context": "https://schema.org", "@type": "Product", name: p.name, brand: { "@type": "Brand", name: p.brand },
-      description: p.description || undefined, image: p.images.length ? p.images : undefined, category: p.categoryName,
+      description: p.description || undefined, image: p.images.length ? p.images.map(imgUrl) : undefined, category: p.categoryName,
       offers: { "@type": "AggregateOffer", priceCurrency: "PKR", lowPrice: from, highPrice: to, offerCount: p.variants.length,
         availability: p.variants.some((x) => x.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" },
     },
