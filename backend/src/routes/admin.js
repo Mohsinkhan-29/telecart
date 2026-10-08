@@ -1,5 +1,7 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { createHash, randomBytes } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { query, withTx } from "../db.js";
@@ -58,6 +60,18 @@ r.post("/reset-password", ah(async (req, res) => {
 r.use(requireAdmin);
 
 r.get("/me", (req, res) => res.json(req.admin));
+
+// Image upload: the raw file is the request body, saved to backend/uploads
+const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+r.post("/upload", express.raw({ type: Object.keys(EXT), limit: "5mb" }), ah(async (req, res) => {
+  const ext = EXT[req.headers["content-type"]];
+  if (!ext || !req.body?.length) throw new HttpError(400, "Upload a JPG, PNG, WEBP or GIF image.");
+  const dir = path.resolve("uploads");
+  await mkdir(dir, { recursive: true });
+  const name = `${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
+  await writeFile(path.join(dir, name), req.body);
+  res.status(201).json({ url: `${req.protocol}://${req.get("host")}/uploads/${name}` });
+}));
 
 // ───────── Dashboard ─────────
 r.get("/dashboard", ah(async (_req, res) => {

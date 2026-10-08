@@ -121,7 +121,7 @@ function Detail({ p }) {
               <ul className="tc-bul">
                 {p.warranty && <li><Icon name="shield" />Warranty: {p.warranty}</li>}
                 <li><Icon name="check" />Price and availability confirmed with you on WhatsApp before dispatch</li>
-                <li><Icon name="truck" />Delivery across Pakistan. See our <Link to="/delivery-returns" style={{ textDecoration: "underline", fontWeight: 700 }}>delivery and returns policy</Link></li>
+                <li><Icon name="truck" />Delivery across Karachi. See our <Link to="/delivery-returns" style={{ textDecoration: "underline", fontWeight: 700 }}>delivery and returns policy</Link></li>
               </ul>
             </div>
           </div>

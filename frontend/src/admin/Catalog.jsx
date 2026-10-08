@@ -29,7 +29,7 @@ export default function Catalog() {
                   <td className="td font-mono">{prices.length ? formatPKR(Math.min(...prices)) : "—"}</td>
                   <td className="td font-mono">{p.variants.reduce((n, v) => n + v.stock, 0)}</td>
                   <td className="td">{p.isActive ? <span className="text-ok">Live</span> : <span className="text-chrome">Hidden</span>}</td>
-                  <td className="td text-right"><button onClick={() => toggle(p.id)} className="text-xs text-chrome hover:text-amber">{p.isActive ? "Hide" : "Show"}</button></td>
+                  <td className="td text-right"><button onClick={() => toggle(p.id)} className="text-xs text-chrome hover:text-[#c5e813]">{p.isActive ? "Hide" : "Show"}</button></td>
                 </tr>
               );
             })}

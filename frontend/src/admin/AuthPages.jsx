@@ -36,7 +36,7 @@ export function Login() {
         {msg && <p className="text-sm text-danger">{msg}</p>}
         <button className="btn btn-primary w-full" disabled={busy}>{busy ? "…" : "Log in"}</button>
       </form>
-      <Link to="/admin/forgot-password" className="block text-sm text-chrome hover:text-amber mt-4">Forgot password?</Link>
+      <Link to="/admin/forgot-password" className="block text-sm text-chrome hover:text-[#c5e813] mt-4">Forgot password?</Link>
     </Shell>
   );
 }
@@ -47,10 +47,10 @@ export function ForgotPassword() {
     <Shell title="Reset password">
       <form onSubmit={submit} className="space-y-4">
         <Field name="email" label="Admin email" type="email" />
-        {msg && <p className="text-sm text-amber">{msg}</p>}
+        {msg && <p className="text-sm text-[#c5e813]">{msg}</p>}
         <button className="btn btn-primary w-full" disabled={busy}>{busy ? "…" : "Email me a reset link"}</button>
       </form>
-      <Link to="/admin/login" className="block text-sm text-chrome hover:text-amber mt-4">Back to login</Link>
+      <Link to="/admin/login" className="block text-sm text-chrome hover:text-[#c5e813] mt-4">Back to login</Link>
     </Shell>
   );
 }

@@ -8,11 +8,11 @@ export const SITE_DEFAULTS = {
     whatsapp: "03342844244",
     phone: "03342844244",
     email: "",
-    address: "shop 183 starcity,saddar,karachi",
+    address: "shop 183 first floor, starcity, Saddar, karachi",
     hours: "1pm-10pm",
     facebook: "https://www.facebook.com/telecart.com.pk/",
     instagram: "https://www.instagram.com/telecart_official/",
-    utilityText: "Delivery across Pakistan",
+    utilityText: "Delivery across Karachi",
     priceNote: "All prices in PKR and subject to change daily",
   },
 
@@ -55,7 +55,7 @@ export const SITE_DEFAULTS = {
   },
 
   home: {
-    ticker: ["Original and sealed phones", "Delivery across Pakistan", "Order on WhatsApp", "Genuine chargers and cables", "After-sales support"],
+    ticker: ["Original and sealed phones", "Delivery across Karachi", "Order on WhatsApp", "Genuine chargers and cables", "After-sales support"],
     categories: { show: true, eyebrow: "Shop by category", title: "Mobiles and accessories online", linkLabel: "All products", limit: 4 },
     popular: { show: true, eyebrow: "Most popular", title: "Best mobiles in Pakistan right now", limit: 8 },
     deals: {
@@ -76,7 +76,7 @@ export const SITE_DEFAULTS = {
       cards: [
         { icon: "shield", title: "Genuine products", text: "Brand-new phones and genuine accessories. Every listing shows the exact storage, colour and SIM type.", linkLabel: "", linkTo: "" },
         { icon: "whatsapp", title: "Order on WhatsApp", text: "Build your cart, send it to us on WhatsApp, and we confirm price and stock with you directly.", linkLabel: "", linkTo: "" },
-        { icon: "truck", title: "Delivery across Pakistan", text: "Doorstep delivery to cities across Pakistan. Delivery time and charges are confirmed on WhatsApp.", linkLabel: "Delivery and returns", linkTo: "/delivery-returns" },
+        { icon: "truck", title: "Delivery across karachi", text: "Doorstep delivery to cities across Karachi. Delivery time and charges are confirmed on WhatsApp.", linkLabel: "Delivery and returns", linkTo: "/delivery-returns" },
         { icon: "headset", title: "After-sales support", text: "Questions about your phone, charger or order? Message us on WhatsApp and a real person replies.", linkLabel: "Contact us", linkTo: "/contact" },
       ],
     },
@@ -113,7 +113,7 @@ export const SITE_DEFAULTS = {
       { title: "Choose your phone", text: "Pick the model, storage, colour and SIM type. The PKR price is shown on every listing." },
       { title: "Send your cart on WhatsApp", text: "One tap sends your whole cart to us with your details." },
       { title: "We confirm everything", text: "We check stock, confirm the final price and agree delivery and payment with you." },
-      { title: "Delivered to your door", text: "Your order is dispatched to your city. Questions after delivery? Message us again." },
+      { title: "Delivered to your door", text: "Your order is dispatched to your place. Questions after delivery? Message us again." },
     ],
     valuesTitle: "What we stand for",
     values: [

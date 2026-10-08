@@ -5,12 +5,17 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
 
 async function request(path, { method = "GET", body, admin = false } = {}) {
+  const raw = body instanceof Blob; // a File is a Blob: send it as-is, not as JSON
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined) headers["Content-Type"] = raw ? body.type : "application/json";
   if (admin && getToken()) headers.Authorization = `Bearer ${getToken()}`;
   let res;
   try {
-    res = await fetch(`${BASE}/api${path}`, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+    res = await fetch(`${BASE}/api${path}`, {
+      method,
+      headers,
+      body: raw ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    });
   } catch {
     throw new Error("Can't reach the server. Is the backend running?");
   }
@@ -33,6 +38,7 @@ export const adminApi = {
   put: (p, body) => request(`/admin${p}`, { method: "PUT", body, admin: true }),
   patch: (p, body = {}) => request(`/admin${p}`, { method: "PATCH", body, admin: true }),
   del: (p) => request(`/admin${p}`, { method: "DELETE", admin: true }),
+  upload: (file) => request("/admin/upload", { method: "POST", body: file, admin: true }),
   // unauthenticated admin endpoints (login, forgot/reset password)
   open: (p, body) => request(`/admin${p}`, { method: "POST", body }),
 };

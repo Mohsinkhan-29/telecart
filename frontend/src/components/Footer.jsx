@@ -211,6 +211,10 @@ export default function Footer() {
             <Link to="/contact">
               Contact us
             </Link>
+
+            <Link to="/admin/login">
+              admin panel
+            </Link>
           </div>
 
           {/* Popular searches */}

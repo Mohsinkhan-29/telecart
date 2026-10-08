@@ -6,8 +6,10 @@ import { specsToText } from "../lib/format";
 import { ErrorBox, Loading } from "../components/Status";
 
 const blankVariant = () => ({ label: "", sku: "", price: "", compareAtPrice: "", stock: "0" });
-const EMPTY = { name: "", brand: "", categoryId: "", description: "", condition: "NEW", warranty: "", specs: "", images: "",
-  isActive: true, isFeatured: false, seoTitle: "", seoDescription: "", variants: [{ ...blankVariant(), label: "Standard" }] };
+const EMPTY = {
+  name: "", brand: "", categoryId: "", description: "", condition: "NEW", warranty: "", specs: "", images: "",
+  isActive: true, isFeatured: false, seoTitle: "", seoDescription: "", variants: [{ ...blankVariant(), label: "Standard" }]
+};
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -17,6 +19,7 @@ export default function ProductForm() {
   const [f, setF] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const p = existing.data;
@@ -31,6 +34,19 @@ export default function ProductForm() {
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setVar = (i, k, v) => setF((s) => ({ ...s, variants: s.variants.map((x, j) => (j === i ? { ...x, [k]: v } : x)) }));
+
+  async function uploadImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // lets you pick the same file again
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return setError("Image must be under 5 MB.");
+    setUploading(true); setError(null);
+    try {
+      const { url } = await adminApi.upload(file);
+      setF((s) => ({ ...s, images: s.images ? `${s.images}\n${url}` : url }));
+    } catch (err) { setError(err.message); }
+    setUploading(false);
+  }
 
   async function save(e) {
     e.preventDefault(); setBusy(true); setError(null);
@@ -51,6 +67,8 @@ export default function ProductForm() {
 
   if (id && existing.loading) return <Loading />;
   if (existing.error) return <ErrorBox message={existing.error} />;
+  const images = f.images.split("\n").filter(Boolean);
+
   return (
     <div>
       <h1 className="text-3xl mb-6">{id ? "Edit product" : "New product"}</h1>
@@ -69,10 +87,28 @@ export default function ProductForm() {
           <div><label className="label">Warranty</label><input className="input" placeholder="e.g. 1 year" value={f.warranty} onChange={(e) => set("warranty", e.target.value)} /></div>
         </div>
         <div><label className="label">Description</label><textarea rows={3} className="input" value={f.description} onChange={(e) => set("description", e.target.value)} /></div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className="label">Specs (one per line, Key: Value)</label><textarea rows={5} className="input font-mono text-xs" placeholder={'Display: 6.5" AMOLED\nBattery: 5000 mAh'} value={f.specs} onChange={(e) => set("specs", e.target.value)} /></div>
-          <div><label className="label">Image URLs (one per line)</label><textarea rows={5} className="input font-mono text-xs" value={f.images} onChange={(e) => set("images", e.target.value)} />
-            <p className="text-xs text-chrome mt-1">No photo yet? Phones get a drawn phone in the colour named in the variant label (White, Blue, Orange…).</p></div>
+        <div><label className="label">Specs (one per line, Key: Value)</label><textarea rows={5} className="input font-mono text-xs" placeholder={'Display: 6.5" AMOLED\nBattery: 5000 mAh'} value={f.specs} onChange={(e) => set("specs", e.target.value)} /></div>
+
+        <div>
+          <label className="label" htmlFor="pf-image">Product images</label>
+          <input id="pf-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="input"
+            disabled={uploading} onChange={uploadImage} />
+          {uploading && <p className="text-xs text-chrome mt-1">Uploading…</p>}
+          {images.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              {images.map((src, i) => (
+                <div key={src} className="text-center">
+                  <img src={src} alt={`${f.name || "Product"} photo ${i + 1}`}
+                    className="w-28 h-28 object-contain rounded border border-steel-line bg-white p-2" />
+                  <button type="button" className="text-xs text-chrome hover:text-danger mt-1"
+                    onClick={() => set("images", images.filter((_, j) => j !== i).join("\n"))}>
+                    {i === 0 ? "Remove (main)" : "Remove"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-chrome mt-1">JPG, PNG, WEBP or GIF, up to 5 MB. The first image is the main photo. No photo? Phones get a drawn phone in the colour named in the variant label.</p>
         </div>
 
         <details className="spec-plate" open={!!(f.seoTitle || f.seoDescription)}>
@@ -91,7 +127,7 @@ export default function ProductForm() {
           </div>
           {f.variants.map((v, i) => (
             <div key={v.id ?? `n${i}`} className="grid grid-cols-2 sm:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-end">
-              <div className="col-span-2 sm:col-span-1"><label className="label text-xs">Label</label><input required className="input py-1.5" placeholder="8GB/256GB · Black" value={v.label} onChange={(e) => setVar(i, "label", e.target.value)} /></div>
+              <div className="col-span-2 sm:col-span-1"><label className="label text-xs">Label</label><input required className="input py-1.5" placeholder="256GB · Blue · eSIM" value={v.label} onChange={(e) => setVar(i, "label", e.target.value)} /></div>
               <div><label className="label text-xs">Price</label><input required type="number" min={0} className="input py-1.5" value={v.price} onChange={(e) => setVar(i, "price", e.target.value)} /></div>
               <div><label className="label text-xs">Was</label><input type="number" min={0} className="input py-1.5" value={v.compareAtPrice} onChange={(e) => setVar(i, "compareAtPrice", e.target.value)} /></div>
               <div><label className="label text-xs">Stock</label><input required type="number" min={0} className="input py-1.5" value={v.stock} onChange={(e) => setVar(i, "stock", e.target.value)} /></div>
@@ -106,7 +142,7 @@ export default function ProductForm() {
           <label className="flex items-center gap-2"><input type="checkbox" checked={f.isFeatured} onChange={(e) => set("isFeatured", e.target.checked)} /> Featured on home</label>
         </div>
         {error && <p className="text-danger text-sm">{error}</p>}
-        <button className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : id ? "Save changes" : "Create product"}</button>
+        <button className="btn btn-primary" disabled={busy || uploading}>{busy ? "Saving…" : id ? "Save changes" : "Create product"}</button>
       </form>
     </div>
   );
