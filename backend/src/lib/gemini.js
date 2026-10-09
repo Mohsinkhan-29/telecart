@@ -24,6 +24,16 @@ export async function embed(text, task) {
   return (await res.json()).embedding.values;
 }
 
+// Chat bubbles show plain text, so remove markdown the model sometimes adds anyway.
+const plain = (s) => s
+  .replace(/\*\*(.+?)\*\*/g, "$1")      // **bold**
+  .replace(/(^|\s)\*(\S.*?)\*/g, "$1$2") // *italic*
+  .replace(/^#+\s*/gm, "")               // # headings
+  .replace(/^\s*[-*•]\s+/gm, "")         // - bullet points
+  .replace(/\s*(--|—)\s*/g, ", ")        // dashes
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
+
 /** history: [{ role: "user" | "model", text }] */
 export async function chat(system, history) {
   const body = JSON.stringify({
