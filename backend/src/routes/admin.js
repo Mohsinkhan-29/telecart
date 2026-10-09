@@ -323,7 +323,7 @@ r.post("/orders/:id/cancel", ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// ───────── Ledger ─────────
+
 // ───────── Ledger overview: sales, khata, inventory ─────────
 // Shop months run on Karachi time.
 const MONTH = "date_trunc('month', now() AT TIME ZONE 'Asia/Karachi') AT TIME ZONE 'Asia/Karachi'";

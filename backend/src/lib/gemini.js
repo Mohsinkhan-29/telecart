@@ -5,7 +5,14 @@ const key = () => {
   return process.env.GEMINI_API_KEY;
 };
 const embedModel = () => process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
-const chatModel = () => process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
+// First model is tried first; the rest are backups for when it's busy.
+const chatModels = () => [
+  process.env.GEMINI_CHAT_MODEL || "gemini-3.8-flash",
+  ...(process.env.GEMINI_FALLBACK_MODELS || "gemini-flash-latest,gemini-3.5-flash").split(","),
+].map((m) => m.trim()).filter((m, i, a) => m && a.indexOf(m) === i);
+
+const BUSY = new Set([429, 500, 503, 504]); // temporary errors worth retrying
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function embed(text, task) {
   const res = await fetch(`${BASE}/models/${embedModel()}:embedContent`, {
@@ -19,16 +26,31 @@ export async function embed(text, task) {
 
 /** history: [{ role: "user" | "model", text }] */
 export async function chat(system, history) {
-  const res = await fetch(`${BASE}/models/${chatModel()}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key() },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
-      generationConfig: { temperature: 0.3, maxOutputTokens: 600 },
-    }),
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
+    generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
   });
-  if (!res.ok) throw new Error(`Gemini chat ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+  let lastError;
+  for (const model of chatModels()) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch(`${BASE}/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key() },
+        body,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+        if (text) return text;
+        lastError = new Error(`Gemini chat ${model}: empty reply`);
+        break; // try the next model
+      }
+      lastError = new Error(`Gemini chat ${model} ${res.status}: ${await res.text()}`);
+      if (!BUSY.has(res.status)) break; // e.g. 404: this model won't work, move on
+      if (attempt === 0) await wait(800);
+    }
+    console.warn("[chat] falling back:", lastError.message.slice(0, 160));
+  }
+  throw lastError;
 }
