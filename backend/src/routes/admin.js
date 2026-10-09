@@ -314,58 +314,136 @@ r.post("/orders/:id/cancel", ah(async (req, res) => {
 }));
 
 // ───────── Ledger ─────────
-r.get("/customers", ah(async (req, res) => {
-  const q = String(req.query.q ?? "").trim();
-  const params = [];
-  let where = "";
-  if (q) {
-    params.push(`%${q}%`, `%${q.replace(/\D/g, "") || "~"}%`);
-    where = "WHERE c.name ILIKE $1 OR c.phone LIKE $2";
+// ───────── Ledger overview: sales, khata, inventory ─────────
+// Shop months run on Karachi time.
+const MONTH = "date_trunc('month', now() AT TIME ZONE 'Asia/Karachi') AT TIME ZONE 'Asia/Karachi'";
+const PERIODS = {
+  month: [MONTH, "'infinity'::timestamptz"],
+  last: [`${MONTH} - interval '1 month'`, MONTH],
+  all: ["'-infinity'::timestamptz", "'infinity'::timestamptz"],
+};
+// A cancelled order writes a CREDIT that reverses its DEBIT. That is not a payment.
+const REVERSAL = "(e.type = 'CREDIT' AND e.order_id IS NOT NULL AND e.note LIKE '%cancelled')";
+const PAYMENT = `(e.type = 'CREDIT' AND NOT ${REVERSAL})`;
+
+r.get("/ledger", ah(async (req, res) => {
+  const [from, to] = PERIODS[req.query.period] ?? PERIODS.month;
+  const inPeriod = (col) => `${col} >= ${from} AND ${col} < ${to}`;
+  const [orders, pools, khata, collected, inventory] = await Promise.all([
+    // ponytail: loads every confirmed order to split payments across bills; paginate if this passes ~10k orders.
+    query(`SELECT o.id, o.created_at AS date, o.total, c.id AS "customerId", c.name, c.phone,
+        (${inPeriod("o.created_at")}) AS "inPeriod",
+        (SELECT COALESCE(sum(i.qty), 0)::int FROM order_items i WHERE i.order_id = o.id) AS units,
+        (SELECT string_agg(i.name || CASE WHEN i.label <> 'Standard' THEN ' ' || i.label ELSE '' END
+                 || CASE WHEN i.qty > 1 THEN ' ×' || i.qty ELSE '' END, ' + ' ORDER BY i.id)
+           FROM order_items i WHERE i.order_id = o.id) AS items
+      FROM orders o JOIN customers c ON c.id = o.customer_id
+      WHERE o.status = 'CONFIRMED' ORDER BY o.created_at, o.id`),
+    query(`SELECT customer_id AS id, sum(amount)::int AS paid FROM ledger_entries e WHERE ${PAYMENT} GROUP BY customer_id`),
+    query(`SELECT c.id, c.name, c.phone,
+        (COALESCE(sum(e.amount) FILTER (WHERE e.type = 'DEBIT'), 0) - COALESCE(sum(e.amount) FILTER (WHERE ${REVERSAL}), 0))::int AS bought,
+        COALESCE(sum(e.amount) FILTER (WHERE ${PAYMENT}), 0)::int AS paid,
+        max(e.date) FILTER (WHERE ${PAYMENT}) AS "lastPaid",
+        min(e.date) FILTER (WHERE e.type = 'DEBIT') AS since
+      FROM customers c JOIN ledger_entries e ON e.customer_id = c.id
+      GROUP BY c.id HAVING ${BAL} > 0 ORDER BY ${BAL} DESC`),
+    query(`SELECT COALESCE(sum(amount), 0)::int AS n FROM ledger_entries e WHERE ${PAYMENT} AND ${inPeriod("e.date")}`),
+    query(`SELECT v.id, p.id AS "productId", p.name, v.label, cat.name AS category, v.stock, v.price,
+        (SELECT COALESCE(sum(i.qty), 0)::int FROM order_items i JOIN orders o ON o.id = i.order_id
+          WHERE i.variant_id = v.id AND o.status = 'CONFIRMED' AND ${inPeriod("o.created_at")}) AS sold
+      FROM variants v JOIN products p ON p.id = v.product_id JOIN categories cat ON cat.id = p.category_id
+      WHERE p.is_active ORDER BY v.stock, p.name`),
+  ]);
+
+  // Payments settle each customer's oldest bills first.
+  const pool = new Map(pools.rows.map((x) => [x.id, x.paid]));
+  const sales = [];
+  for (const o of orders.rows) {
+    const left = pool.get(o.customerId) ?? 0;
+    const paid = Math.min(o.total, left);
+    pool.set(o.customerId, left - paid);
+    if (o.inPeriod) sales.push({ ...o, paid, inPeriod: undefined });
   }
-  const { rows } = await query(
-    `SELECT c.id, c.name, c.phone, ${BAL} AS balance FROM customers c
-     LEFT JOIN ledger_entries e ON e.customer_id = c.id ${where}
-     GROUP BY c.id ${req.query.owing ? `HAVING ${BAL} > 0` : ""} ORDER BY c.name`, params);
-  res.json({ customers: rows, totalOwed: rows.reduce((n, c) => n + Math.max(0, c.balance), 0) });
+  sales.reverse();
+
+  const DAY = 86_400_000;
+  const owing = khata.rows.map((k) => {
+    const balance = k.bought - k.paid;
+    const lastActivity = new Date(k.lastPaid ?? k.since);
+    return { ...k, balance, overdue: Date.now() - lastActivity > 30 * DAY };
+  });
+  const stock = inventory.rows.map((v) => ({ ...v, value: v.stock * v.price }));
+
+  res.json({
+    stats: {
+      sold: sales.reduce((n, s) => n + s.total, 0),
+      bills: sales.length,
+      units: sales.reduce((n, s) => n + s.units, 0),
+      collected: collected.rows[0].n,
+      owed: owing.reduce((n, k) => n + k.balance, 0),
+      owingCount: owing.length,
+      overdue: owing.filter((k) => k.overdue).length,
+      stockUnits: stock.reduce((n, v) => n + v.stock, 0),
+      stockValue: stock.reduce((n, v) => n + v.value, 0),
+      lowStock: stock.filter((v) => v.stock <= 3).length,
+    },
+    sales: sales.slice(0, 300),
+    khata: owing,
+    inventory: stock,
+  });
 }));
 
-r.post("/customers", ah(async (req, res) => {
-  const name = String(req.body?.name ?? "").trim();
-  const phone = normalizePhone(req.body?.phone);
-  if (name.length < 2) throw new HttpError(400, "Enter the customer's name.");
-  if (!phone) throw new HttpError(400, "Enter a valid phone number.");
-  const { rows } = await query(
-    "INSERT INTO customers (name, phone) VALUES ($1,$2) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id", [name, phone]);
-  res.status(201).json({ id: rows[0].id });
-}));
-
-r.get("/customers/:id", ah(async (req, res) => {
-  const id = Number(req.params.id) || 0;
-  const c = (await query("SELECT id, name, phone FROM customers WHERE id = $1", [id])).rows[0];
-  if (!c) throw new HttpError(404, "Customer not found");
-  const entries = (await query(
-    `SELECT id, order_id AS "orderId", type, amount, note, date FROM ledger_entries
-     WHERE customer_id = $1 ORDER BY date, id`, [id])).rows;
-  let running = 0;
-  const withBalance = entries.map((e) => ({ ...e, running: (running += e.type === "DEBIT" ? e.amount : -e.amount) }));
-  res.json({ ...c, balance: running, entries: withBalance.reverse() }); // newest first
-}));
-
-const EntryIn = z.object({
-  type: z.enum(["DEBIT", "CREDIT"]),
-  amount: z.coerce.number().int().positive(),
-  date: z.string().optional(),
+// Counter sale: saves a confirmed bill, takes stock out and records any payment, all at once.
+const SaleIn = z.object({
+  name: z.string().trim().max(80).default(""),
+  phone: z.string().trim().max(20).default(""),
+  paid: z.coerce.number().int().min(0),
   note: z.string().trim().max(200).default(""),
+  items: z.array(z.object({
+    variantId: z.coerce.number().int(),
+    qty: z.coerce.number().int().min(1).max(999),
+    price: z.coerce.number().int().min(0),
+  })).min(1).max(30),
 });
-r.post("/customers/:id/entries", ah(async (req, res) => {
-  const p = EntryIn.safeParse(req.body);
-  if (!p.success) throw new HttpError(400, "Enter an amount greater than zero.");
-  const date = p.data.date ? new Date(p.data.date) : new Date();
-  if (Number.isNaN(date.getTime())) throw new HttpError(400, "Invalid date.");
-  const id = Number(req.params.id) || 0;
-  if (!(await query("SELECT 1 FROM customers WHERE id = $1", [id])).rowCount) throw new HttpError(404, "Customer not found");
-  await query("INSERT INTO ledger_entries (customer_id, type, amount, note, date) VALUES ($1,$2,$3,$4,$5)", [id, p.data.type, p.data.amount, p.data.note, date]);
-  res.status(201).json({ ok: true });
+
+r.post("/sales", ah(async (req, res) => {
+  const p = SaleIn.safeParse(req.body);
+  if (!p.success) throw new HttpError(400, "Add at least one item with a quantity and price.");
+  const { items, paid, note } = p.data;
+  const total = items.reduce((n, i) => n + i.qty * i.price, 0);
+  if (paid > total) throw new HttpError(400, "Paid can't be more than the bill total.");
+  const phone = p.data.phone ? normalizePhone(p.data.phone) : null;
+  if (p.data.phone && !phone) throw new HttpError(400, "Enter a valid phone number, or leave it empty for a walk-in.");
+  if (!phone && paid < total) throw new HttpError(400, "Add the customer's phone number to sell on credit (khata).");
+  const name = p.data.name || "Walk-in";
+
+  const id = await withTx(async (db) => {
+    // Walk-ins without a number share one account, which always stays settled.
+    const c = await db.query(
+      `INSERT INTO customers (name, phone) VALUES ($1, $2)
+       ON CONFLICT (phone) DO UPDATE SET name = CASE WHEN $3 THEN EXCLUDED.name ELSE customers.name END RETURNING id`,
+      [name, phone ?? "walk-in", Boolean(phone && p.data.name)]);
+    const customerId = c.rows[0].id;
+    const o = await db.query("INSERT INTO orders (customer_id, status, total, note) VALUES ($1, 'CONFIRMED', $2, $3) RETURNING id",
+      [customerId, total, note || "Counter sale"]);
+    const orderId = o.rows[0].id;
+    for (const it of items) {
+      const v = (await db.query(
+        `UPDATE variants v SET stock = v.stock - $1 FROM products p
+         WHERE v.id = $2 AND p.id = v.product_id AND v.stock >= $1 RETURNING p.name, v.label`, [it.qty, it.variantId])).rows[0];
+      if (!v) throw new HttpError(409, "Not enough stock for one of the items. Check the quantities.");
+      await db.query("INSERT INTO order_items (order_id, variant_id, name, label, unit_price, qty) VALUES ($1,$2,$3,$4,$5,$6)",
+        [orderId, it.variantId, v.name, v.label, it.price, it.qty]);
+    }
+    await db.query("INSERT INTO ledger_entries (customer_id, order_id, type, amount, note) VALUES ($1,$2,'DEBIT',$3,$4)",
+      [customerId, orderId, total, `Bill TC-${orderId}`]);
+    if (paid > 0) {
+      await db.query("INSERT INTO ledger_entries (customer_id, order_id, type, amount, note) VALUES ($1,$2,'CREDIT',$3,$4)",
+        [customerId, orderId, paid, `Paid at counter, bill TC-${orderId}`]);
+    }
+    return orderId;
+  });
+  res.status(201).json({ id });
 }));
 
 // ───────── Chatbot knowledge ─────────
