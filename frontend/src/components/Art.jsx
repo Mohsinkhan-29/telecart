@@ -1,5 +1,7 @@
 /* Drawn product art, used when a product has no photo yet. */
 
+import { imgUrl } from "../lib/api";
+
 const COLOURS = [
   [/white|silver|starlight/i, ["#eceef0", "#a9aeb6"]],
   [/orange|copper/i, ["#f4aa72", "#b4501a"]],
@@ -72,7 +74,7 @@ export function AccessoryArt({ kind = "box", size = 110 }) {
 
 /** Photo if the product has one, otherwise drawn art based on its category. */
 export function ProductVisual({ product, variantLabel, w = 100, size = 110 }) {
-  if (product.images?.[0]) return <img src={product.images[0]} alt={product.name} className="tc-pimg" loading="lazy" />;
+  if (product.images?.[0]) return <img src={imgUrl(product.images[0])} alt={product.name} className="tc-pimg" loading="lazy" />;
   const kind = `${product.categoryIcon || ""} ${product.categoryName || ""} ${product.name || ""}`;
   if (/phone|mobile|iphone|galaxy|pixel/i.test(kind) && !/cable|charg|hands/i.test(product.name)) {
     return <PhoneArt w={w} label={variantLabel ?? product.variants?.[0]?.label ?? product.name} />;

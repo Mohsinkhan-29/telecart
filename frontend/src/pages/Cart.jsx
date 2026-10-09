@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, imgUrl } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { useSeo } from "../lib/seo";
 import { formatPKR } from "../lib/format";
@@ -10,7 +10,7 @@ import { PageHead } from "../components/PageHead";
 const CITIES = ["Karachi", "Lahore", "Islamabad / Rawalpindi", "Faisalabad", "Hyderabad", "Multan", "Peshawar", "Other city"];
 
 function Thumb({ i }) {
-  if (i.image) return <img src={i.image} alt="" />;
+  if (i.image) return <img src={imgUrl(i.image)} alt="" />;
   const kind = `${i.categoryIcon || ""} ${i.categoryName || ""} ${i.name}`;
   if (/phone|mobile|iphone/i.test(kind) && !/cable|charg|hands/i.test(i.name)) return <PhoneArt w={40} label={i.label} mark="" />;
   return <AccessoryArt kind={kind} size={64} />;

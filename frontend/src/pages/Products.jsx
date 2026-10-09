@@ -8,6 +8,8 @@ import ProductCard from "../components/ProductCard";
 import { PageHead, SeoBlocks } from "../components/PageHead";
 import { ErrorBox, Loading } from "../components/Status";
 
+import { imgUrl } from "../lib/api";
+
 const SORTS = [["", "Newest"], ["low", "Price: low to high"], ["high", "Price: high to low"]];
 const minPrice = (p) => Math.min(...p.variants.map((v) => v.price));
 
