@@ -67,7 +67,7 @@ export default function Orders() {
       <div className="flex flex-wrap gap-2">
         {TABS.map(([k, label]) => (
           <button key={label} onClick={() => setSp(k ? { status: k } : {})}
-            className={`px-3.5 py-1.5 rounded border text-sm ${status === k ? "border-amber text-amber" : "border-steel-line text-chrome-light hover:border-chrome"}`}>
+            className={`px-3.5 py-1.5 rounded border text-sm ${status === k ? "border-[#c5e813] text-[#c5e813" : "border-steel-line text-chrome-light hover:border-chrome"}`}>
             {label} <span className="ml-1 font-mono text-xs opacity-70">{count(k)}</span>
           </button>
         ))}
