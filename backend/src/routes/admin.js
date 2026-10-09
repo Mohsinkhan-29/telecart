@@ -26,14 +26,24 @@ r.post("/login", ah(async (req, res) => {
 }));
 
 r.post("/forgot-password", ah(async (req, res) => {
-  const email = String(req.body?.email ?? "").trim().toLowerCase();
-  const { rows } = await query("SELECT id, email FROM admins WHERE email = $1", [email]);
+  const entered = String(req.body?.email ?? "").trim().toLowerCase();
+  const recovery = (process.env.ADMIN_RECOVERY_EMAIL || "").trim().toLowerCase();
+  // Accept either the admin login or the recovery email. Typing the recovery email resets the first admin.
+  const { rows } = await query(
+    "SELECT id, email FROM admins WHERE email = $1 OR ($2 <> '' AND $1 = $2) ORDER BY (email = $1) DESC, id LIMIT 1",
+    [entered, recovery]);
   if (rows[0]) {
     const token = randomBytes(32).toString("hex");
     await query("INSERT INTO password_reset_tokens (admin_id, token_hash, expires_at) VALUES ($1,$2, now() + interval '1 hour')", [rows[0].id, sha(token)]);
     const link = `${process.env.FRONTEND_URL || "http://localhost:5173"}/admin/reset-password?token=${token}`;
-    await sendMail(rows[0].email, "Reset your admin password",
-      `<p>Click to reset your password (valid for 1 hour):</p><p><a href="${link}">${link}</a></p><p>If you didn't ask for this, ignore this email.</p>`);
+    await sendMail(recovery || rows[0].email, "Your Telecart admin login",
+      `<div style="font-family:Arial,sans-serif;font-size:15px;color:#111">
+        <h2 style="margin:0 0 12px">Telecart admin login</h2>
+        <p>Your username: <b>${rows[0].email}</b></p>
+        <p>Click below to set a new password. The link works for 1 hour.</p>
+        <p><a href="${link}" style="display:inline-block;background:#c5e813;color:#111;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold">Set new password</a></p>
+        <p style="color:#666;font-size:13px">If you didn't ask for this, ignore this email. Your password stays the same.</p>
+      </div>`);
   }
   // Never reveal whether the email exists.
   res.json({ message: "If that email belongs to an admin, a reset link is on its way." });
