@@ -446,6 +446,25 @@ r.post("/sales", ah(async (req, res) => {
   res.status(201).json({ id });
 }));
 
+
+// Add a payment or charge to a customer's khata.
+const PaymentIn = z.object({
+  type: z.enum(["DEBIT", "CREDIT"]),
+  amount: z.coerce.number().int().positive(),
+  date: z.string().optional(),
+  note: z.string().trim().max(200).default(""),
+});
+r.post("/customers/:id/entries", ah(async (req, res) => {
+  const p = PaymentIn.safeParse(req.body);
+  if (!p.success) throw new HttpError(400, "Enter an amount greater than zero.");
+  const date = p.data.date ? new Date(p.data.date) : new Date();
+  if (Number.isNaN(date.getTime())) throw new HttpError(400, "Invalid date.");
+  const id = Number(req.params.id) || 0;
+  if (!(await query("SELECT 1 FROM customers WHERE id = $1", [id])).rowCount) throw new HttpError(404, "Customer not found");
+  await query("INSERT INTO ledger_entries (customer_id, type, amount, note, date) VALUES ($1,$2,$3,$4,$5)",
+    [id, p.data.type, p.data.amount, p.data.note, date]);
+  res.status(201).json({ ok: true });
+}));
 // ───────── Chatbot knowledge ─────────
 r.get("/knowledge", ah(async (_req, res) => {
   res.json((await query("SELECT source, count(*)::int AS chunks FROM knowledge_chunks GROUP BY source ORDER BY source")).rows);
