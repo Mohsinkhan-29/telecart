@@ -323,6 +323,21 @@ r.post("/orders/:id/cancel", ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Remove an order for good. Confirmed orders must be cancelled first so stock and khata are put back.
+r.delete("/orders/:id", ah(async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  await withTx(async (db) => {
+    const o = (await db.query("SELECT status FROM orders WHERE id = $1 FOR UPDATE", [id])).rows[0];
+    if (!o) throw new HttpError(404, "Order not found.");
+    if (o.status === "CONFIRMED") throw new HttpError(409, "Cancel this order first, so its stock and khata entry are reversed.");
+    // The bill and its cancellation cancel out, so drop both. Any payment taken stays on the customer's khata.
+    await db.query(`DELETE FROM ledger_entries WHERE order_id = $1
+      AND (type = 'DEBIT' OR (type = 'CREDIT' AND note LIKE '%cancelled'))`, [id]);
+    await db.query("DELETE FROM orders WHERE id = $1", [id]);
+  });
+  res.json({ ok: true });
+}));
+
 
 // ───────── Ledger overview: sales, khata, inventory ─────────
 // Shop months run on Karachi time.
