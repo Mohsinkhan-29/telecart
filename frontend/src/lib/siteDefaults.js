@@ -5,8 +5,8 @@
 export const SITE_DEFAULTS = {
   store: {
     name: "Tele Cart",
-    whatsapp: "03332844022",
-    phone: "03303190775",
+    whatsapp: "+92 303 2174330",
+    phone: "+92 303 2174330,03303190775",
     email: "",
     address: "shop 183 first floor, starcity, Saddar, karachi",
     hours: "1pm-10pm",
