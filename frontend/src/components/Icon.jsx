@@ -1,6 +1,7 @@
 /* Stroke icons used across the storefront. Admin pickers use ICON_NAMES. */
 const P = {
   phone: <><rect x="7" y="2" width="10" height="20" rx="2.5" /><path d="M11 18h2" /></>,
+  laptop: <><rect x="4" y="5" width="16" height="11" rx="1.5" /><path d="M2 19h20" /></>,
   tablet: <><rect x="4" y="3" width="16" height="18" rx="2.5" /><path d="M11 18h2" /></>,
   watch: <><rect x="7" y="6" width="10" height="12" rx="3" /><path d="M9 6l.8-3h4.4l.8 3M9 18l.8 3h4.4l.8-3" /></>,
   charger: <path d="M9 3v4M15 3v4M7 7h10v4a5 5 0 01-10 0zM12 16v5" />,

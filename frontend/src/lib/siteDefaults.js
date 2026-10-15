@@ -25,6 +25,8 @@ export const SITE_DEFAULTS = {
     links: [
       { label: "Home", to: "/" },
       { label: "Mobiles", to: "/products?category=smartphones" },
+      { label: "Macbooks", to: "/products?category=macbooks" },
+      { label: "Ipads", to: "/products?category=ipads" },
       { label: "Accessories", to: "/products" },
       { label: "About", to: "/about" },
       { label: "Contact", to: "/contact" },
